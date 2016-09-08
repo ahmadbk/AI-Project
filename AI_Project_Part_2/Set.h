@@ -10,26 +10,37 @@
 #include<String.h>
 #include<ctime>
 #include "Features.h"
-#include "Set.h"
 
 using namespace std;
 
-class Part {
+class Set {
 
 private:
-	string name;
-	Set partData[6];
+	int distance;
+	int orientation;
+	Features f;
+
 
 public:
 
-	string getName()
+	float getDistance()
 	{
-		return name;
+		return distance;
 	}
 
-	void setName(string n)
+	float getOrientation()
 	{
-		name = n;
+		return orientation;
+	}
+
+	void setDistance(float d)
+	{
+		distance = d;
+	}
+
+	void setOrientation(float o)
+	{
+		orientation = o;
 	}
 
 };
