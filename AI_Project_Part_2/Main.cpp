@@ -20,12 +20,41 @@ void ExtractData();
 using namespace std;
 using namespace cv;
 Part p[33];
+float labels[33] = { 0 };
+float trainingData[33][48] = { 0 };
 
 
 int main(int argc, char * argv[]) {
 
 	ExtractData();
 
+	for (int i = 0; i < 33; i++)
+		labels[i] = p[i].getResult();
+
+	for (int i = 0; i < 33; i++)
+	{
+		int k = 0;
+		for (int j = 0; j < 8; j++)
+		{
+			trainingData[i][k++] = p[i].partData[j].getDistance();
+			trainingData[i][k++] = p[i].partData[j].getOrientation();
+			trainingData[i][k++] = p[i].partData[j].f.getContrast();
+			trainingData[i][k++] = p[i].partData[j].f.getCorrelation();
+			trainingData[i][k++] = p[i].partData[j].f.getEnergy();
+			trainingData[i][k++] = p[i].partData[j].f.getEntropy();
+			trainingData[i][k++] = p[i].partData[j].f.getHomogeneity();
+			trainingData[i][k++] = p[i].partData[j].f.getMaxProb();
+		}
+	}
+
+	for (int i = 0; i < 33; i++)
+	{
+		for (int j = 0; j < 48; j++)
+		{
+			cout << trainingData[i][j] << "|";
+		}
+		cout << endl;
+	}
 
 	Ptr<ml::SVM> svm = ml::SVM::create();
 
@@ -75,11 +104,11 @@ void ExtractData()
 				{
 					token2 = strtok_s(token1, "#", &next_token2);//distance
 					if (token2 != NULL)
-						p[i].partData[k].setDistance(stoi(token2, nullptr, 10));
+						p[i].partData[k].setDistance(atof(token2));
 
 					token2 = strtok_s(NULL, "#", &next_token2);//orientation
 					if (token2 != NULL)
-						p[i].partData[k].setOrientation(stoi(token2, nullptr, 10));
+						p[i].partData[k].setOrientation(atof(token2));
 
 					token2 = strtok_s(NULL, "#", &next_token2);//Max Probability
 					if (token2 != NULL)
@@ -113,18 +142,19 @@ void ExtractData()
 			i++;
 		}
 
-		for (int j = 0; j < 33; j++)
-		{
-			cout << p[j].getName() << ":" << p[j].getType() << endl;
-			for (int k = 0; k < 8; k++)
-			{
-				cout << p[j].partData[k].getDistance() << ":" << p[j].partData[k].getOrientation() << ":";
-				cout << p[j].partData[k].f.getMaxProb() << ":" << p[j].partData[k].f.getEnergy() << ":" << p[j].partData[k].f.getHomogeneity() << ":" << p[j].partData[k].f.getContrast() << ":" << p[j].partData[k].f.getCorrelation() << ":" << p[j].partData[k].f.getEntropy() << endl;
-			}
-			cout << endl;
-		}
+		//for (int j = 0; j < 33; j++)
+		//{
+		//	cout << p[j].getName() << ":" << p[j].getResult() << endl;
+		//	for (int k = 0; k < 8; k++)
+		//	{
+		//		cout << p[j].partData[k].getDistance() << ":" << p[j].partData[k].getOrientation() << ":";
+		//		cout << p[j].partData[k].f.getMaxProb() << ":" << p[j].partData[k].f.getEnergy() << ":" << p[j].partData[k].f.getHomogeneity() << ":" << p[j].partData[k].f.getContrast() << ":" << p[j].partData[k].f.getCorrelation() << ":" << p[j].partData[k].f.getEntropy() << endl;
+		//	}
+		//	cout << endl;
+		//}
 	}
 
 	file.close();
 
 }
+

@@ -16,8 +16,8 @@ using namespace std;
 class Set {
 
 private:
-	int distance;
-	int orientation;
+	float distance;
+	float orientation;
 
 public:
 

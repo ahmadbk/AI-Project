@@ -20,7 +20,7 @@ class Part {
 
 private:
 	string name;
-	int type;
+	float result;
 
 public:
 
@@ -36,14 +36,14 @@ public:
 		name = n;
 	}
 
-	int getType()
+	float getResult()
 	{
-		return type;
+		return result;
 	}
 
-	void setType(int t)
+	void setType(float t)
 	{
-		type = t;
+		result = t;
 	}
 
 };
