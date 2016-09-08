@@ -30,26 +30,6 @@ int main(int argc, char * argv[]) {
 	ExtractData();
 	setUpMtrices();
 
-	for (int i = 0; i < 33; i++)
-	{
-		cout << labels[i] << " ";
-	}
-	cout << endl;
-
-	for (int j = 0; j < 33; j++)
-	{
-		if (p[j].getName() == "img_good4.jpg")
-		{
-			cout << p[j].getName() << ":" << p[j].getResult() << endl;
-			for (int k = 0; k < 8; k++)
-			{
-				cout << p[j].partData[k].getDistance() << ":" << p[j].partData[k].getOrientation() << ":";
-				cout << p[j].partData[k].f.getMaxProb() << ":" << p[j].partData[k].f.getEnergy() << ":" << p[j].partData[k].f.getHomogeneity() << ":" << p[j].partData[k].f.getContrast() << ":" << p[j].partData[k].f.getCorrelation() << ":" << p[j].partData[k].f.getEntropy() << endl;
-			}
-
-		}
-	}
-
 	// Set up training data
 	int labels1[4] = { 1, -1, -1, -1 };
 	float trainingData1[4][2] = { { 501, 10 },{ 255, 10 },{ 501, 255 },{ 10, 501 } };
@@ -70,6 +50,8 @@ int main(int argc, char * argv[]) {
 	svm->train(trainingDataMat, ml::ROW_SAMPLE, labelsMat);
 	// Show the decision regions given by the SVM
 	Vec3b green(0, 255, 0), blue(255, 0, 0) , red(0, 0, 255);
+
+	/*
 	Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0556522,0.0210734,0.629576,3.97587,0.861576,4.33083,
 										   1,45,0.0498361,0.010869,0.429037,11.1753,0.612005,4.87243,
 										   1,90,0.091425,0.0176644,0.531528,8.10971,0.735974,4.62668,
@@ -78,14 +60,13 @@ int main(int argc, char * argv[]) {
 										   3,45,0.0199375,0.00734851,0.304332,24.1898,0.0622217,5.0946,
 									       3,90,0.0896728,0.0152826,0.443339,14.2769,0.532541,4.8087,
 										   3,135,0.0184963,0.00739352,0.307927,23.7264,0.0805686,5.09004);//good image9
-	
+	*/
 
 	for (int i = 0; i < image.rows; ++i)
 		for (int j = 0; j < image.cols; ++j)
 		{
 			Mat sampleMat = (Mat_<float>(1, 64) << 1, 0, 0.0556522, 0.0210734, 0.629576, 3.97587, 0.861576, 4.33083, 1, 45, 0.0498361, 0.010869, 0.429037, 11.1753, 0.612005, 4.87243, 1, 90, 0.091425, 0.0176644, 0.531528, 8.10971, 0.735974, 4.62668, 1, 135, 0.0500546, 0.0108245, 0.427532, 11.2877, 0.608104, 4.87383, 3, 0, 0.040879, 0.0118639, 0.462, 13.5043, 0.480707, 4.80591, 3, 45, 0.0199375, 0.00734851, 0.304332, 24.1898, 0.0622217, 5.0946, 3, 90, 0.0896728, 0.0152826, 0.443339, 14.2769, 0.532541, 4.8087, 3, 135, 0.0184963, 0.00739352, 0.307927, 23.7264, 0.0805686, 5.09004);//good image
 			//Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0568401,0.019672,0.597911,3.40824,0.825642,4.28173,1,45,0.0399709,0.0134097,0.501062,6.15044,0.681509,4.58679,1,90,0.0465116,0.021869,0.6548,3.05325,0.841502,4.17655,1,135,0.0414244,0.0143955,0.518552,5.50169,0.715103,4.52574,3,0,0.038886,0.0119066,0.45043,10.6285,0.426248,4.72859,3,45,0.0280749,0.00992875,0.373532,15.5618,0.115914,4.86259,3,90,0.0298824,0.0132436,0.503332,8.02729,0.570005,4.622,3,135,0.0219251,0.0100109,0.386123,13.0439,0.259723,4.83616);//bad image
-			//Mat sampleMat = (Mat_<float>(1, 2) << j, i);
 			float response = svm->predict(sampleMat);
 			if (response == 1.0)
 				image.at<Vec3b>(i, j) = green;
@@ -95,34 +76,14 @@ int main(int argc, char * argv[]) {
 				image.at<Vec3b>(i, j) = red;
 		}
 
-	//// Show the training data
-	//int thickness = -1;
-	//int lineType = 8;
-	//circle(image, Point(501, 10), 5, Scalar(0, 0, 0), thickness, lineType);
-	//circle(image, Point(255, 10), 5, Scalar(255, 255, 255), thickness, lineType);
-	//circle(image, Point(501, 255), 5, Scalar(255, 255, 255), thickness, lineType);
-	//circle(image, Point(10, 501), 5, Scalar(255, 255, 255), thickness, lineType);
-	// Show support vectors
-	//thickness = 2;
-	//lineType = 8;
-	//Mat sv = svm->getUncompressedSupportVectors();
-	//for (int i = 0; i < sv.rows; ++i)
-	//{
-	//	const float* v = sv.ptr<float>(i);
-	//	circle(image, Point((int)v[0], (int)v[1]), 6, Scalar(128, 128, 128), thickness, lineType);
-	//}
-
-
 	imwrite("result.png", image);        // save the image
-	imshow("SVM Simple Example", image); // show it to the user
+	imshow("SVM Result", image); // show it to the user
 	waitKey(0);
-
 
 }
 
 void ExtractData()
 {
-
 	std::ifstream file;
 	string line;
 	file.open("C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Practical 1/213504260/Source Code/AI-Project/Results.txt");
