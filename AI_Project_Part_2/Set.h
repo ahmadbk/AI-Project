@@ -18,10 +18,10 @@ class Set {
 private:
 	int distance;
 	int orientation;
-	Features f;
-
 
 public:
+
+	Features f;
 
 	float getDistance()
 	{

@@ -18,9 +18,10 @@ class Part {
 
 private:
 	string name;
-	Set partData[6];
 
 public:
+
+	Set partData[8];
 
 	string getName()
 	{
