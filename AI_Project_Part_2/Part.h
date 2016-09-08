@@ -14,10 +14,13 @@
 
 using namespace std;
 
+//type: 1:good 0:empty -1:bad
+
 class Part {
 
 private:
 	string name;
+	int type;
 
 public:
 
@@ -31,6 +34,16 @@ public:
 	void setName(string n)
 	{
 		name = n;
+	}
+
+	int getType()
+	{
+		return type;
+	}
+
+	void setType(int t)
+	{
+		type = t;
 	}
 
 };

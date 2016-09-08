@@ -22,15 +22,14 @@ using namespace cv;
 Part p[33];
 
 
-//ImageName;Distance#Orientation#MaxProbabilty#Energy#Homogeneity#Contrast#Correlation#Entropy;Distance#Orientation...
-
 int main(int argc, char * argv[]) {
 
 	ExtractData();
 
-	system("pause");
 
 	Ptr<ml::SVM> svm = ml::SVM::create();
+
+	system("pause");
 
 }
 
@@ -58,7 +57,16 @@ void ExtractData()
 			char *token2 = NULL;
 			token1 = strtok_s(line1, ";", &next_token1);
 			string imageName = token1;
+
 			p[i].setName(imageName);
+			
+			if (imageName.find("bad") != string::npos)
+				p[i].setType(-1);
+			else if (imageName.find("good") != string::npos)
+				p[i].setType(1);
+			else if(imageName.find("empty") != string::npos)
+				p[i].setType(0);
+
 			token1 = strtok_s(NULL, ";", &next_token1);
 
 			while (token1 != NULL)
@@ -107,7 +115,7 @@ void ExtractData()
 
 		for (int j = 0; j < 33; j++)
 		{
-			cout << p[j].getName() << endl;
+			cout << p[j].getName() << ":" << p[j].getType() << endl;
 			for (int k = 0; k < 8; k++)
 			{
 				cout << p[j].partData[k].getDistance() << ":" << p[j].partData[k].getOrientation() << ":";
