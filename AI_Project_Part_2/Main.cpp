@@ -11,10 +11,14 @@
 #include<String.h>
 #include<ctime>
 #include "opencv2/ml.hpp"
+#include "Part.h"
 
 
 using namespace std;
 using namespace cv;
 
 int main(int argc, char * argv[]) {
+
+	Ptr<ml::SVM> svm = ml::SVM::create();
+
 }
