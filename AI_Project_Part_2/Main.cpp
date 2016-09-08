@@ -30,13 +30,10 @@ int main(int argc, char * argv[]) {
 	ExtractData();
 	setUpMtrices();
 
-	// Set up training data
-	int labels1[4] = { 1, -1, -1, -1 };
-	float trainingData1[4][2] = { { 501, 10 },{ 255, 10 },{ 501, 255 },{ 10, 501 } };
-
 	Ptr<ml::SVM> svm = ml::SVM::create();
+
 	// Data for visual representation
-	int width = 512, height = 512;
+	int width = 100, height = 100;
 	Mat image = Mat::zeros(height, width, CV_8UC3);
 
 	// Set up training data
@@ -48,6 +45,7 @@ int main(int argc, char * argv[]) {
 	svm->setKernel(ml::SVM::LINEAR);
 	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
 	svm->train(trainingDataMat, ml::ROW_SAMPLE, labelsMat);
+
 	// Show the decision regions given by the SVM
 	Vec3b green(0, 255, 0), blue(255, 0, 0) , red(0, 0, 255);
 
