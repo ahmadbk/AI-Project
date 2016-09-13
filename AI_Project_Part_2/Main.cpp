@@ -13,13 +13,17 @@
 #include "opencv2/ml.hpp"
 #include "Part.h"
 
+using namespace std;
+using namespace cv;
+using namespace ml;
 
 void ExtractData();
 void setUpMtrices();
+inline TermCriteria TC(int, double);
+static void test_and_save_classifier(const Ptr<StatModel>&, int ntrain_samples, const string& filename_to_save);
+static bool build_mlp_classifier(const string& filename_to_save);
 
 
-using namespace std;
-using namespace cv;
 Part p[33];
 int labels[12] = { 0 };
 float trainingData[12][64] = { 0 };
@@ -31,6 +35,8 @@ int main(int argc, char * argv[]) {
 
 	ExtractData();
 	setUpMtrices();
+	build_mlp_classifier("hello.txt");
+
 	system("pause");
 
 }
@@ -62,7 +68,7 @@ void ExtractData()
 			p[i].setName(imageName);
 			
 			if (imageName.find("bad") != string::npos)
-				p[i].setResult(-1);
+				p[i].setResult(2);
 			else if (imageName.find("good") != string::npos)
 				p[i].setResult(1);
 			else if(imageName.find("empty") != string::npos)
@@ -194,52 +200,70 @@ void setUpMtrices()
 	}
 }
 
+static bool build_mlp_classifier(const string& filename_to_save)
+{
+	const int class_count = 26;	
+	Mat train_data = Mat(12, 64, CV_32FC1, &trainingData);
+	Mat responses = Mat(12, 1, CV_32S, &labels);
 
-//Ptr<ml::SVM> svm = ml::SVM::create();
+	Ptr<ANN_MLP> model;
 
-//// Data for visual representation
-//int width = 512, height = 512;
-//Mat image = Mat::zeros(height, width, CV_8UC3);
+	Mat train_responses = Mat::zeros(train_data.rows, class_count, CV_32F);
 
-//// Set up training data
-//Mat labelsMat(33, 1, CV_32S, labels);
-//Mat trainingDataMat(33, 64, CV_32FC1, trainingData);
+	// 1. unroll the responses
+	cout << "Unrolling the responses...\n";
+	for (int i = 0; i < train_data.rows; i++)
+	{
+		int cls_label = responses.at<int>(i);
+		train_responses.at<float>(i, cls_label) = 1.f;
+	}
 
-//// Train the SVM
-//svm->setType(ml::SVM::C_SVC);
-//svm->setKernel(ml::SVM::LINEAR);
-//svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-7));
-////svm->setGamma(3);
-//svm->train(trainingDataMat, ml::ROW_SAMPLE, labelsMat);
+	// 2. train classifier
+	int layer_sz[] = { train_data.cols, 100, 100, class_count };
+	int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
+	Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
 
-//// Show the decision regions given by the SVM
-//Vec3b green(0, 255, 0), blue(255, 0, 0) , red(0, 0, 255);
+#if 1
+	int method = ANN_MLP::BACKPROP;
+	double method_param = 0.001;
+	int max_iter = 300;
+#else
+	int method = ANN_MLP::RPROP;
+	double method_param = 0.1;
+	int max_iter = 1000;
+#endif
 
-///*
-//Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0556522,0.0210734,0.629576,3.97587,0.861576,4.33083,
-//									   1,45,0.0498361,0.010869,0.429037,11.1753,0.612005,4.87243,
-//									   1,90,0.091425,0.0176644,0.531528,8.10971,0.735974,4.62668,
-//									   1,135,0.0500546,0.0108245,0.427532,11.2877,0.608104,4.87383,
-//									   3,0,0.040879,0.0118639,0.462,13.5043,0.480707,4.80591,
-//									   3,45,0.0199375,0.00734851,0.304332,24.1898,0.0622217,5.0946,
-//								       3,90,0.0896728,0.0152826,0.443339,14.2769,0.532541,4.8087,
-//									   3,135,0.0184963,0.00739352,0.307927,23.7264,0.0805686,5.09004);//good image9
-//*/
+	Ptr<TrainData> tdata = TrainData::create(train_data, ROW_SAMPLE, train_responses);
 
-//for (int i = 0; i < image.rows; ++i)
-//	for (int j = 0; j < image.cols; ++j)
-//	{
-//		Mat sampleMat = (Mat_<float>(1, 64) << 1, 0, 0.0556522, 0.0210734, 0.629576, 3.97587, 0.861576, 4.33083, 1, 45, 0.0498361, 0.010869, 0.429037, 11.1753, 0.612005, 4.87243, 1, 90, 0.091425, 0.0176644, 0.531528, 8.10971, 0.735974, 4.62668, 1, 135, 0.0500546, 0.0108245, 0.427532, 11.2877, 0.608104, 4.87383, 3, 0, 0.040879, 0.0118639, 0.462, 13.5043, 0.480707, 4.80591, 3, 45, 0.0199375, 0.00734851, 0.304332, 24.1898, 0.0622217, 5.0946, 3, 90, 0.0896728, 0.0152826, 0.443339, 14.2769, 0.532541, 4.8087, 3, 135, 0.0184963, 0.00739352, 0.307927, 23.7264, 0.0805686, 5.09004);//good image
-//		//Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0568401,0.019672,0.597911,3.40824,0.825642,4.28173,1,45,0.0399709,0.0134097,0.501062,6.15044,0.681509,4.58679,1,90,0.0465116,0.021869,0.6548,3.05325,0.841502,4.17655,1,135,0.0414244,0.0143955,0.518552,5.50169,0.715103,4.52574,3,0,0.038886,0.0119066,0.45043,10.6285,0.426248,4.72859,3,45,0.0280749,0.00992875,0.373532,15.5618,0.115914,4.86259,3,90,0.0298824,0.0132436,0.503332,8.02729,0.570005,4.622,3,135,0.0219251,0.0100109,0.386123,13.0439,0.259723,4.83616);//bad image
-//		float response = svm->predict(sampleMat);
-//		if (response == 1.0)
-//			image.at<Vec3b>(i, j) = green;
-//		else if (response == -1.0)
-//			image.at<Vec3b>(i, j) = blue;
-//		else if (response == 0.0)
-//			image.at<Vec3b>(i, j) = red;
-//	}
+	cout << "Training the classifier...\n";
+	model = ANN_MLP::create();
+	model->setLayerSizes(layer_sizes);
+	model->setActivationFunction(ANN_MLP::SIGMOID_SYM, 0, 0);
+	model->setTermCriteria(TC(max_iter, 0));
+	model->setTrainMethod(method, method_param);
+	model->train(tdata);
+	cout << endl;
 
-//imwrite("result.png", image);        // save the image
-//imshow("SVM Result", image); // show it to the user
-//waitKey(0);
+	test_and_save_classifier(model, train_data.rows, filename_to_save);
+
+	return true;
+}
+
+inline TermCriteria TC(int iters, double eps)
+{
+	return TermCriteria(TermCriteria::MAX_ITER + (eps > 0 ? TermCriteria::EPS : 0), iters, eps);
+}
+
+static void test_and_save_classifier(const Ptr<StatModel>& model, int ntrain_samples, const string& filename_to_save)
+{
+	Mat pdata = Mat(21, 64, CV_32FC1, &pData);   //Loading the rest of the data for prediction
+	int i, nsamples_all = pdata.rows;
+
+	cout << "Actual Image Label\t|\tPredicted Label:" << endl;
+	for (i = 0; i < nsamples_all; i++)
+	{
+		Mat sample = pdata.row(i);
+		float r = model->predict(sample);
+		cout << pLabels[i] << "\t\t\t|\t\t" << r << endl;
+	}
+}
