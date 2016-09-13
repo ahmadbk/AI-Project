@@ -34,8 +34,7 @@ int pLabels[12] = { 0 };
 float pData[12][64] = { 0 };
 
 //Confusion Matrix
-int conf;
-
+int confFinal[2][2];
 
 int main(int argc, char * argv[]) {
 
@@ -284,14 +283,95 @@ static void test_and_save_classifier(const Ptr<StatModel>& model, int ntrain_sam
 {
 	Mat pdata = Mat(12, 64, CV_32FC1, &pData);   //Loading the rest of the data for prediction
 	int i, nsamples_all = pdata.rows;
+	float fp_rate, tp_rate;
+	float accuracy, precision, f_score;
+	int totalClassGood = 0;
+	int classGoodCorrect = 0;
+	int totalClassBad = 0;
+	int classBadCorrect = 0;
+	int totalClassEmpty = 0;
+	int classEmptyCorrect = 0;
 
-	cout << "Actual Image Label\t|\tPredicted Label:" << endl;
+
+	//cout << "Actual Image Label\t|\tPredicted Label:" << endl;
 	for (i = 0; i < nsamples_all; i++)
 	{
 		Mat sample = pdata.row(i);
 		float r = model->predict(sample);
-		cout << pLabels[i] << "\t\t\t|\t\t" << r << endl;
+		if (pLabels[i] == 1)
+		{
+			totalClassGood++;
+			if (r == 1)
+				classGoodCorrect++;
+		}
+		else if (pLabels[i] == 0)
+		{
+			totalClassEmpty++;
+			if (r == 0)
+				classEmptyCorrect++;
+		}
+		else
+		{
+			totalClassBad++;
+			if (r == 2)
+				classBadCorrect++;
+		}
+
+		if (r == 1)
+		{
+			if (pLabels[i] == 1)
+				confFinal[0][0]++;//True Positives
+			else
+				confFinal[0][1]++;//False posiive
+		}
+		else
+		{
+			if (pLabels[i] == 1)
+				confFinal[1][0]++;//False negative
+			else
+				confFinal[1][1]++;//True Negatives
+		}
+		
+		//cout << pLabels[i] << "\t\t\t|\t\t" << r << endl;
 	}
+
+	cout << "Confusion Matrix:" << endl;
+	for (int i = 0; i < 2; i++)
+	{
+		for (int j = 0; j < 2; j++)
+			cout << confFinal[i][j] << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "Class Good:" << endl;
+	cout << "Total:" << totalClassGood << endl;
+	cout << "Correct:" << classGoodCorrect << endl;
+	cout << "Incorrect:" << (totalClassGood-classGoodCorrect) << endl << endl;
+
+	cout << "Class Bad:" << endl;
+	cout << "Total:" << totalClassBad << endl;
+	cout << "Correct:" << classBadCorrect << endl;
+	cout << "Incorrect:" << (totalClassBad - classBadCorrect) << endl << endl;
+
+	cout << "Class Empty:" << endl;
+	cout << "Total:" << totalClassEmpty << endl;
+	cout << "Correct:" << classEmptyCorrect << endl;
+	cout << "Incorrect:" << (totalClassEmpty - classEmptyCorrect) << endl << endl;
+
+
+	float p = confFinal[0][0] + confFinal[1][0];
+	float n = confFinal[0][1] + confFinal[1][1];
+
+	fp_rate = confFinal[0][1]/n;
+	tp_rate = confFinal[0][0] /p;
+	precision = confFinal[0][0] / (confFinal[0][0]+confFinal[0][1]);
+	accuracy = (confFinal[0][0] + confFinal[1][1]) / (n+p);
+	f_score = precision*tp_rate;
+
+	cout << "Precision: " << precision*100 << "%" << endl;
+	cout << "Accuracy: " << accuracy*100 << "%" << endl;
+	cout << "F-score: " << f_score*100 << "%" << endl;
 
 	if (!filename_to_save.empty())
 	{
