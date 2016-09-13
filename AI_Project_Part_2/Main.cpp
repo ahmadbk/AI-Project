@@ -20,8 +20,8 @@ using namespace ml;
 void ExtractData();
 void setUpMtrices();
 inline TermCriteria TC(int, double);
-static void test_and_save_classifier(const Ptr<StatModel>&, int ntrain_samples, const string& filename_to_save);
-static bool build_mlp_classifier(const string& filename_to_save);
+static void predict_display_results(const Ptr<StatModel>&, const string& filename_to_save);
+static bool train_mlp_classifier(const string& filename_to_save);
 
 
 Part p[33];
@@ -38,10 +38,9 @@ int confFinal[2][2];
 
 int main(int argc, char * argv[]) {
 
-	ExtractData();
-	setUpMtrices();
-	build_mlp_classifier("hello.txt");
-
+	ExtractData();	//Extract Data from textfile
+	setUpMtrices();	//Split data into appropriate train and test matrices
+	train_mlp_classifier("classifier.txt");	//Initialize and train neural network
 	system("pause");
 
 }
@@ -225,7 +224,7 @@ void setUpMtrices()
 	//}
 }
 
-static bool build_mlp_classifier(const string& filename_to_save)
+static bool train_mlp_classifier(const string& filename_to_save)
 {
 	const int class_count = 26;	
 	Mat train_data = Mat(21, 64, CV_32FC1, &trainingData);
@@ -269,7 +268,7 @@ static bool build_mlp_classifier(const string& filename_to_save)
 	model->train(tdata);
 	cout << endl;
 
-	test_and_save_classifier(model, train_data.rows, filename_to_save);
+	predict_display_results(model, filename_to_save);
 
 	return true;
 }
@@ -279,7 +278,7 @@ inline TermCriteria TC(int iters, double eps)
 	return TermCriteria(TermCriteria::MAX_ITER + (eps > 0 ? TermCriteria::EPS : 0), iters, eps);
 }
 
-static void test_and_save_classifier(const Ptr<StatModel>& model, int ntrain_samples, const string& filename_to_save)
+static void predict_display_results(const Ptr<StatModel>& model, const string& filename_to_save)
 {
 	Mat pdata = Mat(12, 64, CV_32FC1, &pData);   //Loading the rest of the data for prediction
 	int i, nsamples_all = pdata.rows;
