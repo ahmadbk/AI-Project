@@ -226,7 +226,7 @@ void setUpMtrices()
 
 static bool train_mlp_classifier(const string& filename_to_save)
 {
-	const int class_count = 26;	
+	const int class_count = 3;	
 	Mat train_data = Mat(21, 64, CV_32FC1, &trainingData);
 	Mat responses = Mat(21, 1, CV_32S, &labels);
 
@@ -243,14 +243,14 @@ static bool train_mlp_classifier(const string& filename_to_save)
 	}
 
 	// 2. train classifier
-	int layer_sz[] = { train_data.cols, 100, 100, class_count };
+	int layer_sz[] = { train_data.cols,64,class_count };
 	int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
 	Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
 
 #if 1
 	int method = ANN_MLP::BACKPROP;
-	double method_param = 0.001;
-	int max_iter = 300;
+	double method_param = 0.000001;
+	int max_iter = 100;
 #else
 	int method = ANN_MLP::RPROP;
 	double method_param = 0.1;
