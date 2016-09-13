@@ -25,10 +25,16 @@ static bool build_mlp_classifier(const string& filename_to_save);
 
 
 Part p[33];
-int labels[12] = { 0 };
-float trainingData[12][64] = { 0 };
-int pLabels[21] = { 0 };
-float pData[21][64] = { 0 };
+//Training Purposes
+int labels[21] = { 0 };
+float trainingData[21][64] = { 0 };
+
+//Prediction Purposes
+int pLabels[12] = { 0 };
+float pData[12][64] = { 0 };
+
+//Confusion Matrix
+int conf;
 
 
 int main(int argc, char * argv[]) {
@@ -161,50 +167,70 @@ void setUpMtrices()
 		}
 	}
 
-	for (int i = 0; i < 12; i++)
-	{
-		for (int j = 0; j < 64; j++)
-		{
-			if (i < 4)
-				trainingData[i][j] = tempTrainingData[i][j]; 
-			else if (i >= 4 && i < 8)
-				trainingData[i][j] = tempTrainingData[i + 6][j];
-			else if (i >= 8)
-				trainingData[i][j] = tempTrainingData[i + 12][j];
-		}
-		if (i < 4)
-			labels[i] = tempLabels[i]; 
-		else if (i >= 4 && i < 8)
-			labels[i] = tempLabels[i + 6];
-		else if (i >= 8)
-			labels[i] = tempLabels[i + 14];		
-	}
-
 	for (int i = 0; i < 21; i++)
 	{
 		for (int j = 0; j < 64; j++)
 		{
-			if (i < 6)
-				pData[i][j] = tempTrainingData[i+4][j];
-			else if (i >= 6 && i < 12)
-				pData[i][j] = tempTrainingData[i+8][j];
-			else if (i >= 12)
-				pData[i][j] = tempTrainingData[i+12][j];
+			if (i < 7)
+				trainingData[i][j] = tempTrainingData[i][j]; 
+			else if (i >= 7 && i < 14)
+				trainingData[i][j] = tempTrainingData[i + 3][j];
+			else if (i >= 14)
+				trainingData[i][j] = tempTrainingData[i + 6][j];
 		}
-		if (i < 6)
-			pLabels[i] = tempLabels[i+4]; 
-		else if (i >= 6 && i < 12)
-			pLabels[i] = tempLabels[i+8];
-		else if (i >= 12)
-			pLabels[i] = tempLabels[i+12];
+		if (i < 7)
+			labels[i] = tempLabels[i];
+		else if (i >= 7 && i < 14)
+			labels[i] = tempLabels[i + 3];
+		else if (i >= 14)
+			labels[i] = tempLabels[i + 6];
 	}
+
+	for (int i = 0; i < 12; i++)
+	{
+		for (int j = 0; j < 64; j++)
+		{
+			if (i < 3)
+				pData[i][j] = tempTrainingData[i+7][j];
+			else if (i >= 3 && i < 6)
+				pData[i][j] = tempTrainingData[i+14][j];
+			else if (i >= 6)
+				pData[i][j] = tempTrainingData[i+21][j];
+		}
+		if (i < 3)
+			pLabels[i] = tempLabels[i+7];
+		else if (i >= 3 && i < 6)
+			pLabels[i] = tempLabels[i+14];
+		else if (i >= 6)
+			pLabels[i] = tempLabels[i+21];
+	}
+
+	//for (int i = 27; i < 33; i++)
+	//{
+	//	for (int j = 0; j < 64; j++)
+	//	{
+	//		cout << tempTrainingData[i][j] << "-";
+	//	}
+	//	cout << tempLabels[i] << endl << endl;
+	//}
+
+	//cout << "------------------------------------------------" << endl  << endl;
+
+	//for (int i = 6; i < 12; i++)
+	//{
+	//	for (int j = 0; j < 64; j++)
+	//	{
+	//		cout << pData[i][j] << "-";
+	//	}
+	//	cout << pLabels[i] << endl << endl;
+	//}
 }
 
 static bool build_mlp_classifier(const string& filename_to_save)
 {
 	const int class_count = 26;	
-	Mat train_data = Mat(12, 64, CV_32FC1, &trainingData);
-	Mat responses = Mat(12, 1, CV_32S, &labels);
+	Mat train_data = Mat(21, 64, CV_32FC1, &trainingData);
+	Mat responses = Mat(21, 1, CV_32S, &labels);
 
 	Ptr<ANN_MLP> model;
 
@@ -256,7 +282,7 @@ inline TermCriteria TC(int iters, double eps)
 
 static void test_and_save_classifier(const Ptr<StatModel>& model, int ntrain_samples, const string& filename_to_save)
 {
-	Mat pdata = Mat(21, 64, CV_32FC1, &pData);   //Loading the rest of the data for prediction
+	Mat pdata = Mat(12, 64, CV_32FC1, &pData);   //Loading the rest of the data for prediction
 	int i, nsamples_all = pdata.rows;
 
 	cout << "Actual Image Label\t|\tPredicted Label:" << endl;
@@ -265,5 +291,10 @@ static void test_and_save_classifier(const Ptr<StatModel>& model, int ntrain_sam
 		Mat sample = pdata.row(i);
 		float r = model->predict(sample);
 		cout << pLabels[i] << "\t\t\t|\t\t" << r << endl;
+	}
+
+	if (!filename_to_save.empty())
+	{
+		model->save(filename_to_save);
 	}
 }
