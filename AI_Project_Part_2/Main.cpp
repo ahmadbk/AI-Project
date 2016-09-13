@@ -21,62 +21,17 @@ void setUpMtrices();
 using namespace std;
 using namespace cv;
 Part p[33];
-int labels[33] = { 0 };
-float trainingData[33][64] = { 0 };
+int labels[12] = { 0 };
+float trainingData[12][64] = { 0 };
+int pLabels[21] = { 0 };
+float pData[21][64] = { 0 };
 
 
 int main(int argc, char * argv[]) {
 
 	ExtractData();
 	setUpMtrices();
-
-	Ptr<ml::SVM> svm = ml::SVM::create();
-
-	// Data for visual representation
-	int width = 100, height = 100;
-	Mat image = Mat::zeros(height, width, CV_8UC3);
-
-	// Set up training data
-	Mat labelsMat(33, 1, CV_32S, labels);
-	Mat trainingDataMat(33, 64, CV_32FC1, trainingData);
-
-	// Train the SVM
-	svm->setType(ml::SVM::C_SVC);
-	svm->setKernel(ml::SVM::LINEAR);
-	svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
-	svm->train(trainingDataMat, ml::ROW_SAMPLE, labelsMat);
-
-	// Show the decision regions given by the SVM
-	Vec3b green(0, 255, 0), blue(255, 0, 0) , red(0, 0, 255);
-
-	/*
-	Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0556522,0.0210734,0.629576,3.97587,0.861576,4.33083,
-										   1,45,0.0498361,0.010869,0.429037,11.1753,0.612005,4.87243,
-										   1,90,0.091425,0.0176644,0.531528,8.10971,0.735974,4.62668,
-										   1,135,0.0500546,0.0108245,0.427532,11.2877,0.608104,4.87383,
-										   3,0,0.040879,0.0118639,0.462,13.5043,0.480707,4.80591,
-										   3,45,0.0199375,0.00734851,0.304332,24.1898,0.0622217,5.0946,
-									       3,90,0.0896728,0.0152826,0.443339,14.2769,0.532541,4.8087,
-										   3,135,0.0184963,0.00739352,0.307927,23.7264,0.0805686,5.09004);//good image9
-	*/
-
-	for (int i = 0; i < image.rows; ++i)
-		for (int j = 0; j < image.cols; ++j)
-		{
-			Mat sampleMat = (Mat_<float>(1, 64) << 1, 0, 0.0556522, 0.0210734, 0.629576, 3.97587, 0.861576, 4.33083, 1, 45, 0.0498361, 0.010869, 0.429037, 11.1753, 0.612005, 4.87243, 1, 90, 0.091425, 0.0176644, 0.531528, 8.10971, 0.735974, 4.62668, 1, 135, 0.0500546, 0.0108245, 0.427532, 11.2877, 0.608104, 4.87383, 3, 0, 0.040879, 0.0118639, 0.462, 13.5043, 0.480707, 4.80591, 3, 45, 0.0199375, 0.00734851, 0.304332, 24.1898, 0.0622217, 5.0946, 3, 90, 0.0896728, 0.0152826, 0.443339, 14.2769, 0.532541, 4.8087, 3, 135, 0.0184963, 0.00739352, 0.307927, 23.7264, 0.0805686, 5.09004);//good image
-			//Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0568401,0.019672,0.597911,3.40824,0.825642,4.28173,1,45,0.0399709,0.0134097,0.501062,6.15044,0.681509,4.58679,1,90,0.0465116,0.021869,0.6548,3.05325,0.841502,4.17655,1,135,0.0414244,0.0143955,0.518552,5.50169,0.715103,4.52574,3,0,0.038886,0.0119066,0.45043,10.6285,0.426248,4.72859,3,45,0.0280749,0.00992875,0.373532,15.5618,0.115914,4.86259,3,90,0.0298824,0.0132436,0.503332,8.02729,0.570005,4.622,3,135,0.0219251,0.0100109,0.386123,13.0439,0.259723,4.83616);//bad image
-			float response = svm->predict(sampleMat);
-			if (response == 1.0)
-				image.at<Vec3b>(i, j) = green;
-			else if (response == -1.0)
-				image.at<Vec3b>(i, j) = blue;
-			else if (response == 0.0)
-				image.at<Vec3b>(i, j) = red;
-		}
-
-	imwrite("result.png", image);        // save the image
-	imshow("SVM Result", image); // show it to the user
-	waitKey(0);
+	system("pause");
 
 }
 
@@ -177,22 +132,114 @@ void ExtractData()
 
 void setUpMtrices()
 {
+	int tempLabels[33] = { 0 };
+	float tempTrainingData[33][64] = { 0 };
+
 	for (int i = 0; i < 33; i++)
-		labels[i] = p[i].getResult();
+		tempLabels[i] = p[i].getResult();
+	
 
 	for (int i = 0; i < 33; i++)
 	{
 		int k = 0;
 		for (int j = 0; j < 8; j++)
 		{
-			trainingData[i][k++] = p[i].partData[j].getDistance();
-			trainingData[i][k++] = p[i].partData[j].getOrientation();
-			trainingData[i][k++] = p[i].partData[j].f.getContrast();
-			trainingData[i][k++] = p[i].partData[j].f.getCorrelation();
-			trainingData[i][k++] = p[i].partData[j].f.getEnergy();
-			trainingData[i][k++] = p[i].partData[j].f.getEntropy();
-			trainingData[i][k++] = p[i].partData[j].f.getHomogeneity();
-			trainingData[i][k++] = p[i].partData[j].f.getMaxProb();
+			tempTrainingData[i][k++] = p[i].partData[j].getDistance();
+			tempTrainingData[i][k++] = p[i].partData[j].getOrientation();
+			tempTrainingData[i][k++] = p[i].partData[j].f.getContrast();
+			tempTrainingData[i][k++] = p[i].partData[j].f.getCorrelation();
+			tempTrainingData[i][k++] = p[i].partData[j].f.getEnergy();
+			tempTrainingData[i][k++] = p[i].partData[j].f.getEntropy();
+			tempTrainingData[i][k++] = p[i].partData[j].f.getHomogeneity();
+			tempTrainingData[i][k++] = p[i].partData[j].f.getMaxProb();
 		}
 	}
+
+	for (int i = 0; i < 12; i++)
+	{
+		for (int j = 0; j < 64; j++)
+		{
+			if (i < 4)
+				trainingData[i][j] = tempTrainingData[i][j]; 
+			else if (i >= 4 && i < 8)
+				trainingData[i][j] = tempTrainingData[i + 6][j];
+			else if (i >= 8)
+				trainingData[i][j] = tempTrainingData[i + 12][j];
+		}
+		if (i < 4)
+			labels[i] = tempLabels[i]; 
+		else if (i >= 4 && i < 8)
+			labels[i] = tempLabels[i + 6];
+		else if (i >= 8)
+			labels[i] = tempLabels[i + 14];		
+	}
+
+	for (int i = 0; i < 21; i++)
+	{
+		for (int j = 0; j < 64; j++)
+		{
+			if (i < 6)
+				pData[i][j] = tempTrainingData[i+4][j];
+			else if (i >= 6 && i < 12)
+				pData[i][j] = tempTrainingData[i+8][j];
+			else if (i >= 12)
+				pData[i][j] = tempTrainingData[i+12][j];
+		}
+		if (i < 6)
+			pLabels[i] = tempLabels[i+4]; 
+		else if (i >= 6 && i < 12)
+			pLabels[i] = tempLabels[i+8];
+		else if (i >= 12)
+			pLabels[i] = tempLabels[i+12];
+	}
 }
+
+
+//Ptr<ml::SVM> svm = ml::SVM::create();
+
+//// Data for visual representation
+//int width = 512, height = 512;
+//Mat image = Mat::zeros(height, width, CV_8UC3);
+
+//// Set up training data
+//Mat labelsMat(33, 1, CV_32S, labels);
+//Mat trainingDataMat(33, 64, CV_32FC1, trainingData);
+
+//// Train the SVM
+//svm->setType(ml::SVM::C_SVC);
+//svm->setKernel(ml::SVM::LINEAR);
+//svm->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-7));
+////svm->setGamma(3);
+//svm->train(trainingDataMat, ml::ROW_SAMPLE, labelsMat);
+
+//// Show the decision regions given by the SVM
+//Vec3b green(0, 255, 0), blue(255, 0, 0) , red(0, 0, 255);
+
+///*
+//Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0556522,0.0210734,0.629576,3.97587,0.861576,4.33083,
+//									   1,45,0.0498361,0.010869,0.429037,11.1753,0.612005,4.87243,
+//									   1,90,0.091425,0.0176644,0.531528,8.10971,0.735974,4.62668,
+//									   1,135,0.0500546,0.0108245,0.427532,11.2877,0.608104,4.87383,
+//									   3,0,0.040879,0.0118639,0.462,13.5043,0.480707,4.80591,
+//									   3,45,0.0199375,0.00734851,0.304332,24.1898,0.0622217,5.0946,
+//								       3,90,0.0896728,0.0152826,0.443339,14.2769,0.532541,4.8087,
+//									   3,135,0.0184963,0.00739352,0.307927,23.7264,0.0805686,5.09004);//good image9
+//*/
+
+//for (int i = 0; i < image.rows; ++i)
+//	for (int j = 0; j < image.cols; ++j)
+//	{
+//		Mat sampleMat = (Mat_<float>(1, 64) << 1, 0, 0.0556522, 0.0210734, 0.629576, 3.97587, 0.861576, 4.33083, 1, 45, 0.0498361, 0.010869, 0.429037, 11.1753, 0.612005, 4.87243, 1, 90, 0.091425, 0.0176644, 0.531528, 8.10971, 0.735974, 4.62668, 1, 135, 0.0500546, 0.0108245, 0.427532, 11.2877, 0.608104, 4.87383, 3, 0, 0.040879, 0.0118639, 0.462, 13.5043, 0.480707, 4.80591, 3, 45, 0.0199375, 0.00734851, 0.304332, 24.1898, 0.0622217, 5.0946, 3, 90, 0.0896728, 0.0152826, 0.443339, 14.2769, 0.532541, 4.8087, 3, 135, 0.0184963, 0.00739352, 0.307927, 23.7264, 0.0805686, 5.09004);//good image
+//		//Mat sampleMat = (Mat_<float>(1, 64) << 1,0,0.0568401,0.019672,0.597911,3.40824,0.825642,4.28173,1,45,0.0399709,0.0134097,0.501062,6.15044,0.681509,4.58679,1,90,0.0465116,0.021869,0.6548,3.05325,0.841502,4.17655,1,135,0.0414244,0.0143955,0.518552,5.50169,0.715103,4.52574,3,0,0.038886,0.0119066,0.45043,10.6285,0.426248,4.72859,3,45,0.0280749,0.00992875,0.373532,15.5618,0.115914,4.86259,3,90,0.0298824,0.0132436,0.503332,8.02729,0.570005,4.622,3,135,0.0219251,0.0100109,0.386123,13.0439,0.259723,4.83616);//bad image
+//		float response = svm->predict(sampleMat);
+//		if (response == 1.0)
+//			image.at<Vec3b>(i, j) = green;
+//		else if (response == -1.0)
+//			image.at<Vec3b>(i, j) = blue;
+//		else if (response == 0.0)
+//			image.at<Vec3b>(i, j) = red;
+//	}
+
+//imwrite("result.png", image);        // save the image
+//imshow("SVM Result", image); // show it to the user
+//waitKey(0);
