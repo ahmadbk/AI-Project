@@ -23,22 +23,19 @@ inline TermCriteria TC(int, double);
 static void predict_display_results(const Ptr<StatModel>&, const string& filename_to_save);
 static bool train_mlp_classifier(const string& filename_to_save);
 
-
 Part p[33];
 //Training Purposes
-int labels[21] = { 0 };
-float trainingData[21][48] = { 0 };
+int labels[21];
+float trainingData[21][48];
 
 //Prediction Purposes
-int pLabels[12] = { 0 };
-float pData[12][48] = { 0 };
+int pLabels[12];
+float pData[12][48];
 
 //Confusion Matrix
 int confGood[2][2];
 int confBad[2][2];
 int confEmpty[2][2];
-//int confFinal[2][2];
-
 
 int main(int argc, char * argv[]) {
 
