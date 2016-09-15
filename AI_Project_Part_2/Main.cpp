@@ -27,14 +27,18 @@ static bool train_mlp_classifier(const string& filename_to_save);
 Part p[33];
 //Training Purposes
 int labels[21] = { 0 };
-float trainingData[21][64] = { 0 };
+float trainingData[21][48] = { 0 };
 
 //Prediction Purposes
 int pLabels[12] = { 0 };
-float pData[12][64] = { 0 };
+float pData[12][48] = { 0 };
 
 //Confusion Matrix
-int confFinal[2][2];
+int confGood[2][2];
+int confBad[2][2];
+int confEmpty[2][2];
+//int confFinal[2][2];
+
 
 int main(int argc, char * argv[]) {
 
@@ -143,7 +147,7 @@ void ExtractData()
 void setUpMtrices()
 {
 	int tempLabels[33] = { 0 };
-	float tempTrainingData[33][64] = { 0 };
+	float tempTrainingData[33][48] = { 0 };
 
 	for (int i = 0; i < 33; i++)
 		tempLabels[i] = p[i].getResult();
@@ -154,8 +158,8 @@ void setUpMtrices()
 		int k = 0;
 		for (int j = 0; j < 8; j++)
 		{
-			tempTrainingData[i][k++] = p[i].partData[j].getDistance();
-			tempTrainingData[i][k++] = p[i].partData[j].getOrientation();
+			//tempTrainingData[i][k++] = p[i].partData[j].getDistance();
+			//tempTrainingData[i][k++] = p[i].partData[j].getOrientation();
 			tempTrainingData[i][k++] = p[i].partData[j].f.getContrast();
 			tempTrainingData[i][k++] = p[i].partData[j].f.getCorrelation();
 			tempTrainingData[i][k++] = p[i].partData[j].f.getEnergy();
@@ -167,7 +171,7 @@ void setUpMtrices()
 
 	for (int i = 0; i < 21; i++)
 	{
-		for (int j = 0; j < 64; j++)
+		for (int j = 0; j < 48; j++)
 		{
 			if (i < 7)
 				trainingData[i][j] = tempTrainingData[i][j]; 
@@ -186,7 +190,7 @@ void setUpMtrices()
 
 	for (int i = 0; i < 12; i++)
 	{
-		for (int j = 0; j < 64; j++)
+		for (int j = 0; j < 48; j++)
 		{
 			if (i < 3)
 				pData[i][j] = tempTrainingData[i+7][j];
@@ -227,7 +231,7 @@ void setUpMtrices()
 static bool train_mlp_classifier(const string& filename_to_save)
 {
 	const int class_count = 3;	
-	Mat train_data = Mat(21, 64, CV_32FC1, &trainingData);
+	Mat train_data = Mat(21, 48, CV_32FC1, &trainingData);
 	Mat responses = Mat(21, 1, CV_32S, &labels);
 
 	Ptr<ANN_MLP> model;
@@ -243,7 +247,7 @@ static bool train_mlp_classifier(const string& filename_to_save)
 	}
 
 	// 2. train classifier
-	int layer_sz[] = { train_data.cols,64,class_count };
+	int layer_sz[] = { train_data.cols,48,class_count };
 	int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
 	Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
 
@@ -280,10 +284,17 @@ inline TermCriteria TC(int iters, double eps)
 
 static void predict_display_results(const Ptr<StatModel>& model, const string& filename_to_save)
 {
-	Mat pdata = Mat(12, 64, CV_32FC1, &pData);   //Loading the rest of the data for prediction
+	Mat pdata = Mat(12, 48, CV_32FC1, &pData);   //Loading the rest of the data for prediction
 	int i, nsamples_all = pdata.rows;
-	float fp_rate, tp_rate;
-	float accuracy, precision, f_score;
+
+	float fp_rate_good, tp_rate_good;
+	float accuracy_good, precision_good, f_score_good;
+	float fp_rate_bad, tp_rate_bad;
+	float accuracy_bad, precision_bad, f_score_bad;
+	float fp_rate_empty, tp_rate_empty;
+	float accuracy_empty, precision_empty, f_score_empty;
+	float accuracy_final, precision_final, f_score_final;
+
 	int totalClassGood = 0;
 	int classGoodCorrect = 0;
 	int totalClassBad = 0;
@@ -291,8 +302,6 @@ static void predict_display_results(const Ptr<StatModel>& model, const string& f
 	int totalClassEmpty = 0;
 	int classEmptyCorrect = 0;
 
-
-	//cout << "Actual Image Label\t|\tPredicted Label:" << endl;
 	for (i = 0; i < nsamples_all; i++)
 	{
 		Mat sample = pdata.row(i);
@@ -316,37 +325,112 @@ static void predict_display_results(const Ptr<StatModel>& model, const string& f
 				classBadCorrect++;
 		}
 
+//----------------------------------------------------------------------------------
+
+//Good vs Non-Good
+//----------------------------------------------------------------------------------
 		if (r == 1)
 		{
 			if (pLabels[i] == 1)
-				confFinal[0][0]++;//True Positives
+				confGood[0][0]++;//True Positives
 			else
-				confFinal[0][1]++;//False posiive
+				confGood[0][1]++;//False posiive
 		}
 		else
 		{
 			if (pLabels[i] == 1)
-				confFinal[1][0]++;//False negative
+				confGood[1][0]++;//False negative
 			else
-				confFinal[1][1]++;//True Negatives
+				confGood[1][1]++;//True Negatives
 		}
+//----------------------------------------------------------------------------------
+
+//Empty vs NonEmpty
+//----------------------------------------------------------------------------------
+		if (r == 0)
+		{
+			if (pLabels[i] == 0)
+				confEmpty[0][0]++;//True Positives
+			else
+				confEmpty[0][1]++;//False posiive
+		}
+		else
+		{
+			if (pLabels[i] == 0)
+				confEmpty[1][0]++;//False negative
+			else
+				confEmpty[1][1]++;//True Negatives
+		}
+//----------------------------------------------------------------------------------
+
+//Bad vs NonBad
+//----------------------------------------------------------------------------------
+		if (r == 2)
+		{
+			if (pLabels[i] == 2)
+				confBad[0][0]++;//True Positives
+			else
+				confBad[0][1]++;//False posiive
+		}
+		else
+		{
+			if (pLabels[i] == 2)
+				confBad[1][0]++;//False negative
+			else
+				confBad[1][1]++;//True Negatives
+		}
+//----------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------
 		
-		//cout << pLabels[i] << "\t\t\t|\t\t" << r << endl;
 	}
 
-	cout << "Confusion Matrix:" << endl;
-	for (int i = 0; i < 2; i++)
-	{
-		for (int j = 0; j < 2; j++)
-			cout << confFinal[i][j] << " ";
-		cout << endl;
-	}
-	cout << endl;
+//Good
+//----------------------------------------------------------------------------------
+	float p_good = confGood[0][0] + confGood[1][0];
+	float n_good = confGood[0][1] + confGood[1][1];
+	fp_rate_good = confGood[0][1]/ n_good;
+	tp_rate_good = confGood[0][0] / p_good;
+	precision_good = confGood[0][0] / (confGood[0][0]+ confGood[0][1]);
+	accuracy_good = (confGood[0][0] + confGood[1][1]) / (n_good + p_good);
+	f_score_good = precision_good*tp_rate_good;
+//----------------------------------------------------------------------------------
 
+//Bad
+//----------------------------------------------------------------------------------
+	float p_bad = confBad[0][0] + confBad[1][0];
+	float n_bad = confBad[0][1] + confBad[1][1];
+	fp_rate_bad = (float)confBad[0][1] / n_bad;
+	tp_rate_bad = (float)confBad[0][0] / p_bad;
+	precision_bad = (float)(confBad[0][0]) / (confBad[0][0] + confBad[0][1]);
+	accuracy_bad = (float)(confBad[0][0] + confBad[1][1]) / (n_bad + p_bad);
+	f_score_bad = precision_bad*tp_rate_bad;
+//----------------------------------------------------------------------------------
+
+//Empty
+//----------------------------------------------------------------------------------
+	float p_empty = confEmpty[0][0] + confEmpty[1][0];
+	float n_empty = confEmpty[0][1] + confEmpty[1][1];
+	fp_rate_empty = (float)confEmpty[0][1] / n_empty;
+	tp_rate_empty = (float)confEmpty[0][0] / p_empty;
+	precision_empty = (float)confEmpty[0][0] / (confEmpty[0][0] + confEmpty[0][1]);
+	accuracy_empty = (float)(confEmpty[0][0] + confEmpty[1][1]) / (n_empty + p_empty);
+	f_score_empty = precision_empty*tp_rate_empty;
+//----------------------------------------------------------------------------------
+
+//Final
+//----------------------------------------------------------------------------------
+	precision_final = (precision_empty+ precision_bad+ precision_good)/3;
+	accuracy_final = (accuracy_empty+ accuracy_bad+ accuracy_good)/3;
+	f_score_final = (f_score_empty + f_score_bad + f_score_good)/3;
+//----------------------------------------------------------------------------------
+
+//Display Results
+//----------------------------------------------------------------------------------
 	cout << "Class Good:" << endl;
 	cout << "Total:" << totalClassGood << endl;
 	cout << "Correct:" << classGoodCorrect << endl;
-	cout << "Incorrect:" << (totalClassGood-classGoodCorrect) << endl << endl;
+	cout << "Incorrect:" << (totalClassGood - classGoodCorrect) << endl << endl;
 
 	cout << "Class Bad:" << endl;
 	cout << "Total:" << totalClassBad << endl;
@@ -358,19 +442,26 @@ static void predict_display_results(const Ptr<StatModel>& model, const string& f
 	cout << "Correct:" << classEmptyCorrect << endl;
 	cout << "Incorrect:" << (totalClassEmpty - classEmptyCorrect) << endl << endl;
 
+	cout << endl << "Good:" << endl;
+	cout << "Precision: " << precision_good *100 << "%" << endl;
+	cout << "Accuracy: " << accuracy_good *100 << "%" << endl;
+	cout << "F-score: " << f_score_good *100 << "%" << endl;
 
-	float p = confFinal[0][0] + confFinal[1][0];
-	float n = confFinal[0][1] + confFinal[1][1];
+	cout << endl << "Bad:" << endl;
+	cout << "Precision: " << precision_bad * 100 << "%" << endl;
+	cout << "Accuracy: " << accuracy_bad * 100 << "%" << endl;
+	cout << "F-score: " << f_score_bad * 100 << "%" << endl;
 
-	fp_rate = confFinal[0][1]/n;
-	tp_rate = confFinal[0][0] /p;
-	precision = confFinal[0][0] / (confFinal[0][0]+confFinal[0][1]);
-	accuracy = (confFinal[0][0] + confFinal[1][1]) / (n+p);
-	f_score = precision*tp_rate;
+	cout << endl << "Empty:" << endl;
+	cout << "Precision: " << precision_empty * 100 << "%" << endl;
+	cout << "Accuracy: " << accuracy_empty * 100 << "%" << endl;
+	cout << "F-score: " << f_score_empty * 100 << "%" << endl;
 
-	cout << "Precision: " << precision*100 << "%" << endl;
-	cout << "Accuracy: " << accuracy*100 << "%" << endl;
-	cout << "F-score: " << f_score*100 << "%" << endl;
+	cout << endl << "Final:" << endl;
+	cout << "Precision: " << precision_final * 100 << "%" << endl;
+	cout << "Accuracy: " << accuracy_final * 100 << "%" << endl;
+	cout << "F-score: " << f_score_final * 100 << "%" << endl;
+//----------------------------------------------------------------------------------
 
 	if (!filename_to_save.empty())
 	{
