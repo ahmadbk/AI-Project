@@ -17,20 +17,22 @@ using namespace std;
 using namespace cv;
 using namespace ml;
 
-void ExtractData();
-void setUpMtrices();
+void ExtractData(Part *,boolean );
+void setUpMtrices(Part *,boolean , int *,float [][48]);
 inline TermCriteria TC(int, double);
 static void predict_display_results(const Ptr<StatModel>&, const string& filename_to_save);
 static bool train_mlp_classifier(const string& filename_to_save);
 
-Part p[33];
+Part training[108];
+Part test[52];
+
 //Training Purposes
-int labels[21];
-float trainingData[21][48];
+int labels[108];
+float trainingData[108][48];
 
 //Prediction Purposes
-int pLabels[12];
-float pData[12][48];
+int pLabels[52];
+float pData[52][48];
 
 //Confusion Matrix
 int confGood[2][2];
@@ -39,18 +41,24 @@ int confEmpty[2][2];
 
 int main(int argc, char * argv[]) {
 
-	ExtractData();	//Extract Data from textfile
-	setUpMtrices();	//Split data into appropriate train and test matrices
-	train_mlp_classifier("classifier.txt");	//Initialize and train neural network
+	ExtractData(training,1);						//Extract Data from train textfile
+	setUpMtrices(training,1, labels, trainingData);	//Split data into appropriate training matrices
+	ExtractData(test, 0);							//Extract Data from test textfile
+	setUpMtrices(test, 0, pLabels, pData);			//Split data into appropriate test matrices
+	train_mlp_classifier("classifier.txt");			//Initialize and train neural network
 	system("pause");
 
 }
 
-void ExtractData()
+void ExtractData(Part *p,boolean t)
 {
 	std::ifstream file;
 	string line;
-	file.open("C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Practical 1/213504260/Source Code/AI-Project/Results.txt");
+	if(t)
+		file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train.txt");
+	else
+		file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test.txt");
+
 	if (!file.is_open())
 	{
 		cout << "Failed To Open File";
@@ -141,22 +149,23 @@ void ExtractData()
 
 }
 
-void setUpMtrices()
+void setUpMtrices(Part *p,boolean t,int *tempLabels,float tempTrainingData[][48])
 {
-	int tempLabels[33] = { 0 };
-	float tempTrainingData[33][48] = { 0 };
+	int size = 0;
+	if (t)
+		size = 108;
+	else
+		size = 52;
 
-	for (int i = 0; i < 33; i++)
+	for (int i = 0; i < size; i++)
 		tempLabels[i] = p[i].getResult();
 	
 
-	for (int i = 0; i < 33; i++)
+	for (int i = 0; i < size; i++)
 	{
 		int k = 0;
 		for (int j = 0; j < 8; j++)
 		{
-			//tempTrainingData[i][k++] = p[i].partData[j].getDistance();
-			//tempTrainingData[i][k++] = p[i].partData[j].getOrientation();
 			tempTrainingData[i][k++] = p[i].partData[j].f.getContrast();
 			tempTrainingData[i][k++] = p[i].partData[j].f.getCorrelation();
 			tempTrainingData[i][k++] = p[i].partData[j].f.getEnergy();
@@ -165,71 +174,13 @@ void setUpMtrices()
 			tempTrainingData[i][k++] = p[i].partData[j].f.getMaxProb();
 		}
 	}
-
-	for (int i = 0; i < 21; i++)
-	{
-		for (int j = 0; j < 48; j++)
-		{
-			if (i < 7)
-				trainingData[i][j] = tempTrainingData[i][j]; 
-			else if (i >= 7 && i < 14)
-				trainingData[i][j] = tempTrainingData[i + 3][j];
-			else if (i >= 14)
-				trainingData[i][j] = tempTrainingData[i + 6][j];
-		}
-		if (i < 7)
-			labels[i] = tempLabels[i];
-		else if (i >= 7 && i < 14)
-			labels[i] = tempLabels[i + 3];
-		else if (i >= 14)
-			labels[i] = tempLabels[i + 6];
-	}
-
-	for (int i = 0; i < 12; i++)
-	{
-		for (int j = 0; j < 48; j++)
-		{
-			if (i < 3)
-				pData[i][j] = tempTrainingData[i+7][j];
-			else if (i >= 3 && i < 6)
-				pData[i][j] = tempTrainingData[i+14][j];
-			else if (i >= 6)
-				pData[i][j] = tempTrainingData[i+21][j];
-		}
-		if (i < 3)
-			pLabels[i] = tempLabels[i+7];
-		else if (i >= 3 && i < 6)
-			pLabels[i] = tempLabels[i+14];
-		else if (i >= 6)
-			pLabels[i] = tempLabels[i+21];
-	}
-
-	//for (int i = 27; i < 33; i++)
-	//{
-	//	for (int j = 0; j < 64; j++)
-	//	{
-	//		cout << tempTrainingData[i][j] << "-";
-	//	}
-	//	cout << tempLabels[i] << endl << endl;
-	//}
-
-	//cout << "------------------------------------------------" << endl  << endl;
-
-	//for (int i = 6; i < 12; i++)
-	//{
-	//	for (int j = 0; j < 64; j++)
-	//	{
-	//		cout << pData[i][j] << "-";
-	//	}
-	//	cout << pLabels[i] << endl << endl;
-	//}
 }
 
 static bool train_mlp_classifier(const string& filename_to_save)
 {
 	const int class_count = 3;	
-	Mat train_data = Mat(21, 48, CV_32FC1, &trainingData);
-	Mat responses = Mat(21, 1, CV_32S, &labels);
+	Mat train_data = Mat(108, 48, CV_32FC1, &trainingData);
+	Mat responses = Mat(108, 1, CV_32S, &labels);
 
 	Ptr<ANN_MLP> model;
 
@@ -244,14 +195,15 @@ static bool train_mlp_classifier(const string& filename_to_save)
 	}
 
 	// 2. train classifier
-	int layer_sz[] = { train_data.cols,48,class_count };
+	//int layer_sz[] = { train_data.cols,100,class_count };
+	int layer_sz[] = { train_data.cols,class_count };
 	int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
 	Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
 
 #if 1
 	int method = ANN_MLP::BACKPROP;
 	double method_param = 0.000001;
-	int max_iter = 100;
+	int max_iter = 10000;
 #else
 	int method = ANN_MLP::RPROP;
 	double method_param = 0.1;
@@ -281,7 +233,7 @@ inline TermCriteria TC(int iters, double eps)
 
 static void predict_display_results(const Ptr<StatModel>& model, const string& filename_to_save)
 {
-	Mat pdata = Mat(12, 48, CV_32FC1, &pData);   //Loading the rest of the data for prediction
+	Mat pdata = Mat(52, 48, CV_32FC1, &pData);   //Loading the rest of the data for prediction
 	int i, nsamples_all = pdata.rows;
 
 	float fp_rate_good, tp_rate_good;
@@ -386,10 +338,10 @@ static void predict_display_results(const Ptr<StatModel>& model, const string& f
 //----------------------------------------------------------------------------------
 	float p_good = confGood[0][0] + confGood[1][0];
 	float n_good = confGood[0][1] + confGood[1][1];
-	fp_rate_good = confGood[0][1]/ n_good;
-	tp_rate_good = confGood[0][0] / p_good;
-	precision_good = confGood[0][0] / (confGood[0][0]+ confGood[0][1]);
-	accuracy_good = (confGood[0][0] + confGood[1][1]) / (n_good + p_good);
+	fp_rate_good = (float)confGood[0][1]/ n_good;
+	tp_rate_good = (float)confGood[0][0] / p_good;
+	precision_good = (float)confGood[0][0] / (confGood[0][0]+ confGood[0][1]);
+	accuracy_good = (float)(confGood[0][0] + confGood[1][1]) / (n_good + p_good);
 	f_score_good = precision_good*tp_rate_good;
 //----------------------------------------------------------------------------------
 
