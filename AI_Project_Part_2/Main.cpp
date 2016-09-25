@@ -17,12 +17,48 @@ using namespace std;
 using namespace cv;
 using namespace ml;
 
-void ExtractData(Part *,boolean );
-void setUpMtrices(Part *,boolean , int *,float [][48]);
+//Feature Extraction Methods
+//--------------------------------------
+void extractFeatures(string *,boolean,const char *,boolean);
+void calculateGLCM(int, int, int, int);
+float maxProb();
+float energy();
+float homogeneity();
+float contrast();
+float entropy();
+float correlation();
+float meani();
+float meanj();
+float deviationi();
+float deviationj();
+//--------------------------------------
+
+//Neural Network Methods
+//--------------------------------------
+void ExtractData(Part *,boolean ,const char*,boolean);
+void setUpMatrices(Part *,boolean , int *,float [][48]);
 inline TermCriteria TC(int, double);
 static void predict_display_results(const Ptr<StatModel>&, const string& filename_to_save);
 static bool train_mlp_classifier(const string& filename_to_save);
+//--------------------------------------
 
+//Feature Extraction Variables
+//--------------------------------------
+const int MAX_SIZE = 16;										//16-tone grayscale images are used
+const int IMAGE_SIZE_WIDTH_MAX = 30;							//Maximum size from the images in the dataset
+const int IMAGE_SIZE_HEIGHT_MAX = 250;
+
+int x[IMAGE_SIZE_HEIGHT_MAX][IMAGE_SIZE_WIDTH_MAX] = { 0 };		//Stores the pixel values of the image
+int GLCM[MAX_SIZE][MAX_SIZE] = { 0 };							//corresponding GLCM matrix
+float p[MAX_SIZE][MAX_SIZE] = { 0 };							//Normalized Matrix
+
+string TrainingImagesArray[108];
+string TestingImagesArray[52];
+
+//--------------------------------------
+
+//Neural Network Variables
+//--------------------------------------
 Part training[108];
 Part test[52];
 
@@ -38,26 +74,60 @@ float pData[52][48];
 int confGood[2][2];
 int confBad[2][2];
 int confEmpty[2][2];
+//--------------------------------------
 
 int main(int argc, char * argv[]) {
 
-	ExtractData(training,1);						//Extract Data from train textfile
-	setUpMtrices(training,1, labels, trainingData);	//Split data into appropriate training matrices
-	ExtractData(test, 0);							//Extract Data from test textfile
-	setUpMtrices(test, 0, pLabels, pData);			//Split data into appropriate test matrices
-	train_mlp_classifier("classifier.txt");			//Initialize and train neural network
+	const char * path = argv[1];
+
+	cout << "Extracting Features for Training Data..." << endl;
+	extractFeatures(TrainingImagesArray,1,path,1);							//Extract Training Features
+
+	cout << "Extracting Features for Test Data..." << endl;
+	extractFeatures(TestingImagesArray,0,path,1);							//Extract Testing Features
+
+	cout << "Extract Training Features from textfile..." << endl;
+	ExtractData(training,1,path,1);											//Extract Data from train textfile
+	cout << "Store Training Data in Neural Network Matrices..." << endl;	
+	setUpMatrices(training,1, labels, trainingData);						//Split data into appropriate training matrices
+
+	cout << "Extract Test Features from textfile..." << endl;
+	ExtractData(test, 0,path,1);											//Extract Data from test textfile
+	cout << "Store Test Data in Neural Network Matrices..." << endl;
+	setUpMatrices(test, 0, pLabels, pData);									//Split data into appropriate test matrices
+
+	cout << "Begin Training..." << endl;
+	train_mlp_classifier("classifier.txt");									//Initialize and train neural network
 	system("pause");
 
 }
 
-void ExtractData(Part *p,boolean t)
+//Neural Network Methods
+//--------------------------------------
+void ExtractData(Part *p,boolean t,const char *path,boolean console)
 {
 	std::ifstream file;
 	string line;
-	if(t)
-		file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train.txt");
+
+	if (console)
+	{
+		string temp1;
+		if (t)
+			temp1 = "train.txt";
+		else
+			temp1 = "test.txt";
+
+		string temp2(path);
+		string temp3 = temp2 + temp1;
+		file.open(temp3);
+	}
 	else
-		file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test.txt");
+	{
+		if (t)
+			file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train.txt");
+		else
+			file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test.txt");
+	}
 
 	if (!file.is_open())
 	{
@@ -149,7 +219,7 @@ void ExtractData(Part *p,boolean t)
 
 }
 
-void setUpMtrices(Part *p,boolean t,int *tempLabels,float tempTrainingData[][48])
+void setUpMatrices(Part *p,boolean t,int *tempLabels,float tempTrainingData[][48])
 {
 	int size = 0;
 	if (t)
@@ -212,15 +282,17 @@ static bool train_mlp_classifier(const string& filename_to_save)
 
 	Ptr<TrainData> tdata = TrainData::create(train_data, ROW_SAMPLE, train_responses);
 
-	cout << "Training the classifier...\n";
+	cout << "Training the classifier..." << endl;
 	model = ANN_MLP::create();
 	model->setLayerSizes(layer_sizes);
 	model->setActivationFunction(ANN_MLP::SIGMOID_SYM, 0, 0);
 	model->setTermCriteria(TC(max_iter, 0));
 	model->setTrainMethod(method, method_param);
 	model->train(tdata);
-	cout << endl;
+	//cout << endl;
 
+	cout << "Begin Prediction..." << endl;
+	cout << "Neural Network Results..." << endl << endl;
 	predict_display_results(model, filename_to_save);
 
 	return true;
@@ -417,3 +489,414 @@ static void predict_display_results(const Ptr<StatModel>& model, const string& f
 		model->save(filename_to_save);
 	}
 }
+//--------------------------------------
+
+//Feature Extraction Methods
+//--------------------------------------
+void extractFeatures(string *imagesArray,boolean t, const char * path,boolean console)
+{
+	int size = 0;
+	if (t)
+		size = 108;
+	else
+		size = 52;
+
+	//double duration;
+	//std::clock_t start;
+	
+	char* imageFilePath;
+	char* temp4;
+	if (console)
+	{
+		string temp1;
+		if (t)
+			temp1 = "train/*";
+		else
+			temp1 = "test/*";
+		
+		string temp2(path);
+		string temp3 = temp2 + temp1;
+		temp4 = new char[temp3.length() + 1];
+		string temp5(temp4);
+		strcpy_s(temp4, temp5.length(), temp3.c_str());
+		imageFilePath = temp4;
+		delete temp4;
+	}
+	else
+	{
+		if (t)
+			imageFilePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train/*";	//path to all the train images
+		else
+			imageFilePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test/*";	//path to all the test images
+	}
+
+	string temp(imageFilePath);
+	string imagePath = temp.substr(0, (temp.length() - 2));
+
+	//Obtain the names of all the images in the filepath
+	//------------------------------------------------------------------------------
+	WIN32_FIND_DATA search_data;
+	memset(&search_data, 0, sizeof(WIN32_FIND_DATA));
+	HANDLE handle = FindFirstFile(imageFilePath, &search_data);
+	int count = 0;
+	while (handle != INVALID_HANDLE_VALUE)
+	{
+		if (count > 1)
+			imagesArray[count - 2] = search_data.cFileName;
+		count++;
+		if (FindNextFile(handle, &search_data) == FALSE)
+			break;
+	}
+	FindClose(handle);
+	//------------------------------------------------------------------------------
+
+	int orientation[4] = { 0,45,90,135 };
+	int distances[2] = { 1,3 };
+	ofstream result;
+
+	if(t)
+		result.open("train.txt");
+	else
+		result.open("test.txt");
+
+	cv::Mat imgOriginal;		// input image
+	cv::Mat imgGrayscale;		// grayscale of input image
+	cv::Mat finalImage;			//16-tone grayscae image
+
+	//result << "ImageName;Distance#Orientation#MaxProbabilty#Energy#Homogeneity#Contrast#Correlation#Entropy;Distance#Orientation...\n";
+
+	//Run the program for all the images found in the folder
+	//------------------------------------------------------------------------------
+	for (int w = 0; w < size; w++)
+	{
+		string imgName = imagesArray[w];
+
+		result << imgName << ";";
+
+		string imagePathl;
+
+		if (console)
+		{
+			string temp1;
+			if (t)
+				temp1 = "train/";
+			else
+				temp1 = "test/";
+
+			string temp(path);
+			string temp3 = temp + temp1;
+			//imagePath = temp.substr(0, (temp.length() - 2));
+			imagePath = temp3;
+		}
+		else
+		{
+			if (t)
+				imagePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train/";
+			else
+				imagePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test/";
+		}
+
+		string path = imagePath + imgName;
+		imgOriginal = cv::imread(path);				// open image
+
+		if (imgOriginal.empty()) {									// if unable to open image
+			std::cout << "error: image not read from file\n\n";		// show error message on command line
+																	//return(0);												// and exit program
+		}
+
+		cv::cvtColor(imgOriginal, imgGrayscale, CV_BGR2GRAY);		// convert to grayscale
+
+																	//Convert the grayscale image to 16-tone grayscal using lookup table
+																	//------------------------------------------------------------------------------
+		uchar *p;
+		cv::Mat lookuptable(1, 256, CV_8U);
+		p = lookuptable.data;
+		for (int i = 0; i < 256; ++i)
+			p[i] = (i / 16);
+		LUT(imgGrayscale, lookuptable, finalImage);
+
+		for (int i = 0; i < finalImage.rows; i++)
+		{
+			for (int j = 0; j < finalImage.cols; j++)
+			{
+				int pixel = (int)(finalImage.at<uchar>(i, j));
+				x[i][j] = pixel;
+			}
+		}
+		//------------------------------------------------------------------------------
+
+		//Calculate all features and store in textfile
+		//------------------------------------------------------------------------------
+		for (int i = 0; i < 2; i++)
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				result << distances[i] << "#";
+				//cout << "Distance: " << distances[i] << endl;
+				result << orientation[j] << "#";
+				//cout << "Orientation: " << orientation[j] << endl;
+
+				calculateGLCM(orientation[j], distances[i], finalImage.cols, finalImage.rows);
+
+				float t1 = maxProb();
+				//cout << "Max Probability: " << t1 << endl;
+				result << t1 << "#";
+
+				float t2 = energy();
+				//cout << "Energy: " << t2 << endl;
+				result << t2 << "#";
+
+				float t3 = homogeneity();
+				//cout << "Homogeneity: " << t3 << endl;
+				result << t3 << "#";
+
+				float t4 = contrast();
+				//cout << "Contrast: " << t4 << endl;
+				result << t4 << "#";
+
+				float t5 = correlation();
+				//cout << "Correlation: " << t5 << endl;
+				result << t5 << "#";
+
+				float t6 = entropy();
+				//cout << "Entropy: " << t6 << endl;
+				result << t6;
+
+				if (i != 1 || j != 3)
+					result << ";";
+				else
+					result << "\n";
+				//cout << endl;
+
+			}
+		}
+		//------------------------------------------------------------------------------
+	}
+	//------------------------------------------------------------------------------
+
+	result.close();
+}
+
+void calculateGLCM(int angle, int distance, int cols, int rows)
+{
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			int temp = 0;
+			for (int k = 0; k < rows; k++)
+			{
+				for (int l = 0; l < cols; l++)
+				{
+					if (x[k][l] == i)
+					{
+						if (angle == 0)
+						{
+							if (l + distance < cols)
+								if (x[k][l + distance] == j)
+									temp += 1;
+
+							if (l - distance >= 0)
+								if (x[k][l - distance] == j)
+									temp += 1;
+						}
+						if (angle == 45)
+						{
+							if (l + distance < cols && k - distance >= 0)
+								if (x[k - distance][l + distance] == j)
+									temp += 1;
+
+							if (l - distance >= 0 && k + distance < rows)
+								if (x[k + distance][l - distance] == j)
+									temp += 1;
+						}
+
+						if (angle == 90)
+						{
+							if (k - distance >= 0)
+								if (x[k - distance][l] == j)
+									temp += 1;
+
+							if (k + distance < rows)
+								if (x[k + distance][l] == j)
+									temp += 1;
+						}
+
+						if (angle == 135)
+						{
+							if (k - distance >= 0 && l - distance >= 0)
+								if (x[k - distance][l - distance] == j)
+									temp += 1;
+
+							if (k + distance < rows && l + distance < cols)
+								if (x[k + distance][l + distance] == j)
+									temp += 1;
+						}
+					}
+				}
+			}
+			GLCM[i][j] = temp;
+		}
+	}
+
+	float total = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			total += GLCM[i][j];
+		}
+	}
+
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			p[i][j] = (float)(GLCM[i][j] / total);
+		}
+	}
+}
+
+float maxProb()
+{
+	float temp = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			if (p[i][j] > temp)
+				temp = p[i][j];
+		}
+	}
+	return temp;
+}
+
+float energy()
+{
+	float total = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			total += p[i][j] * p[i][j];
+		}
+	}
+	return total;
+}
+
+float homogeneity()
+{
+	float temp = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			temp += p[i][j] / (1 + abs(i - j));
+		}
+	}
+	return temp;
+}
+
+float contrast()
+{
+	float temp = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			temp += p[i][j] * (abs(i - j))*(abs(i - j));
+		}
+	}
+	return temp;
+}
+
+float entropy()
+{
+	float temp = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			if (p[i][j] != 0)
+				temp += p[i][j] * (-log(p[i][j]));
+		}
+	}
+	return temp;
+}
+
+float correlation()
+{
+	float mi = meani();
+	float mj = meanj();
+	float di = deviationi();
+	float dj = deviationj();
+	float total = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			float temp1 = i - mi;
+			float temp2 = j - mj;
+			float temp3 = di*dj;
+			total += (p[i][j] * temp1 * temp2) / temp3;
+		}
+	}
+	return total;
+}
+
+float meani()
+{
+	float total = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			total += i*p[i][j];
+		}
+	}
+	return total;
+}
+
+float meanj()
+{
+	float total = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			total += j*p[i][j];
+		}
+	}
+	return total;
+}
+
+float deviationi()
+{
+	float mi = meani();
+	float total = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			float temp = (i - mi)*(i - mi);
+			total += p[i][j] * temp;
+		}
+	}
+	return sqrt(total);
+}
+
+float deviationj()
+{
+	float mj = meanj();
+	float total = 0;
+	for (int i = 0; i < MAX_SIZE; i++)
+	{
+		for (int j = 0; j < MAX_SIZE; j++)
+		{
+			float temp = (j - mj)*(j - mj);
+			total += p[i][j] * temp;
+		}
+	}
+	return sqrt(total);
+}
+//--------------------------------------
