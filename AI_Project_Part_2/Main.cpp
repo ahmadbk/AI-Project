@@ -12,6 +12,8 @@
 #include<ctime>
 #include "opencv2/ml.hpp"
 #include "Part.h"
+#define TRAINING_SIZE 108
+#define TEST_SIZE 52
 
 using namespace std;
 using namespace cv;
@@ -52,23 +54,23 @@ int x[IMAGE_SIZE_HEIGHT_MAX][IMAGE_SIZE_WIDTH_MAX] = { 0 };		//Stores the pixel 
 int GLCM[MAX_SIZE][MAX_SIZE] = { 0 };							//corresponding GLCM matrix
 float p[MAX_SIZE][MAX_SIZE] = { 0 };							//Normalized Matrix
 
-string TrainingImagesArray[108];
-string TestingImagesArray[52];
+string TrainingImagesArray[TRAINING_SIZE];
+string TestingImagesArray[TEST_SIZE];
 
 //--------------------------------------
 
 //Neural Network Variables
 //--------------------------------------
-Part training[108];
-Part test[52];
+Part training[TRAINING_SIZE];
+Part test[TEST_SIZE];
 
 //Training Purposes
-int labels[108];
-float trainingData[108][48];
+int labels[TRAINING_SIZE];
+float trainingData[TRAINING_SIZE][48];
 
 //Prediction Purposes
-int pLabels[52];
-float pData[52][48];
+int pLabels[TEST_SIZE];
+float pData[TEST_SIZE][48];
 
 //Confusion Matrix
 int confGood[2][2];
@@ -80,20 +82,22 @@ int main(int argc, char * argv[]) {
 
 	const char * path = argv[1];
 
+	boolean console = false;
+
 	cout << "Extracting Features for Training Data..." << endl;
-	extractFeatures(TrainingImagesArray,1,path,1);							//Extract Training Features
+	extractFeatures(TrainingImagesArray,1,path, console);							//Extract Training Features
 
 	cout << "Extracting Features for Test Data..." << endl;
-	extractFeatures(TestingImagesArray,0,path,1);							//Extract Testing Features
+	extractFeatures(TestingImagesArray,0,path, console);							//Extract Testing Features
 
 	cout << "Extract Training Features from textfile..." << endl;
-	ExtractData(training,1,path,1);											//Extract Data from train textfile
-	cout << "Store Training Data in Neural Network Matrices..." << endl;	
+	ExtractData(training,1,path, console);											//Extract Data from train textfile
+	cout << "Store Training Data in Matrices..." << endl;	
 	setUpMatrices(training,1, labels, trainingData);						//Split data into appropriate training matrices
 
 	cout << "Extract Test Features from textfile..." << endl;
-	ExtractData(test, 0,path,1);											//Extract Data from test textfile
-	cout << "Store Test Data in Neural Network Matrices..." << endl;
+	ExtractData(test, 0,path, console);											//Extract Data from test textfile
+	cout << "Store Test Data in Matrices..." << endl;
 	setUpMatrices(test, 0, pLabels, pData);									//Split data into appropriate test matrices
 
 	cout << "Begin Training..." << endl;
@@ -223,9 +227,9 @@ void setUpMatrices(Part *p,boolean t,int *tempLabels,float tempTrainingData[][48
 {
 	int size = 0;
 	if (t)
-		size = 108;
+		size = TRAINING_SIZE;
 	else
-		size = 52;
+		size = TEST_SIZE;
 
 	for (int i = 0; i < size; i++)
 		tempLabels[i] = p[i].getResult();
@@ -248,9 +252,12 @@ void setUpMatrices(Part *p,boolean t,int *tempLabels,float tempTrainingData[][48
 
 static bool train_mlp_classifier(const string& filename_to_save)
 {
+	double duration;
+	std::clock_t start = clock();
+
 	const int class_count = 3;	
-	Mat train_data = Mat(108, 48, CV_32FC1, &trainingData);
-	Mat responses = Mat(108, 1, CV_32S, &labels);
+	Mat train_data = Mat(TRAINING_SIZE, 48, CV_32FC1, &trainingData);
+	Mat responses = Mat(TRAINING_SIZE, 1, CV_32S, &labels);
 
 	Ptr<ANN_MLP> model;
 
@@ -265,7 +272,7 @@ static bool train_mlp_classifier(const string& filename_to_save)
 	}
 
 	// 2. train classifier
-	//int layer_sz[] = { train_data.cols,100,class_count };
+	//int layer_sz[] = { train_data.cols,10,class_count };
 	int layer_sz[] = { train_data.cols,class_count };
 	int nlayers = (int)(sizeof(layer_sz) / sizeof(layer_sz[0]));
 	Mat layer_sizes(1, nlayers, CV_32S, layer_sz);
@@ -291,6 +298,9 @@ static bool train_mlp_classifier(const string& filename_to_save)
 	model->train(tdata);
 	//cout << endl;
 
+	duration = (clock() - start) / CLOCKS_PER_SEC;
+	cout << "Total Training Time for " << TRAINING_SIZE << " images is: " << duration << " sec" << endl;
+
 	cout << "Begin Prediction..." << endl;
 	cout << "Neural Network Results..." << endl << endl;
 	predict_display_results(model, filename_to_save);
@@ -305,7 +315,7 @@ inline TermCriteria TC(int iters, double eps)
 
 static void predict_display_results(const Ptr<StatModel>& model, const string& filename_to_save)
 {
-	Mat pdata = Mat(52, 48, CV_32FC1, &pData);   //Loading the rest of the data for prediction
+	Mat pdata = Mat(TEST_SIZE, 48, CV_32FC1, &pData);   //Loading the rest of the data for prediction
 	int i, nsamples_all = pdata.rows;
 
 	float fp_rate_good, tp_rate_good;
@@ -497,9 +507,9 @@ void extractFeatures(string *imagesArray,boolean t, const char * path,boolean co
 {
 	int size = 0;
 	if (t)
-		size = 108;
+		size = TRAINING_SIZE;
 	else
-		size = 52;
+		size = TEST_SIZE;
 
 	//double duration;
 	//std::clock_t start;
