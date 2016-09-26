@@ -128,9 +128,9 @@ void ExtractData(Part *p,boolean t,const char *path,boolean console)
 	else
 	{
 		if (t)
-			file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train.txt");
+			file.open("C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Project/Handed-In/213504260/AI_Project_Part_2/AI_Project_Part_2/train.txt");
 		else
-			file.open("C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test.txt");
+			file.open("C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Project/Handed-In/213504260/AI_Project_Part_2/AI_Project_Part_2/test.txt");
 	}
 
 	if (!file.is_open())
@@ -535,9 +535,9 @@ void extractFeatures(string *imagesArray,boolean t, const char * path,boolean co
 	else
 	{
 		if (t)
-			imageFilePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train/*";	//path to all the train images
+			imageFilePath = "C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Project/Handed-In/213504260/AI_Project_Part_2/AI_Project_Part_2/train/*";	//path to all the train images
 		else
-			imageFilePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test/*";	//path to all the test images
+			imageFilePath = "C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Project/Handed-In/213504260/AI_Project_Part_2/AI_Project_Part_2/test/*";	//path to all the test images
 	}
 
 	string temp(imageFilePath);
@@ -601,9 +601,9 @@ void extractFeatures(string *imagesArray,boolean t, const char * path,boolean co
 		else
 		{
 			if (t)
-				imagePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/train/";
+				imagePath = "C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Project/Handed-In/213504260/AI_Project_Part_2/AI_Project_Part_2/train/";
 			else
-				imagePath = "C:/Users/ahmadbk/Desktop/AI_Project_Part_2/AI_Project_Part_2/test/";
+				imagePath = "C:/Users/ahmadbk/Desktop/Semester1/Artificial Intelligence/Project/Handed-In/213504260/AI_Project_Part_2/AI_Project_Part_2/test/";
 		}
 
 		string path = imagePath + imgName;
