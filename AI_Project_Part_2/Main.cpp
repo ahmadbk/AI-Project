@@ -1,5 +1,5 @@
-//Ahmad Bin Khalid
-//Imran Paruk
+//Ahmad Bin Khalid - 213504260
+//Imran Paruk - 213502802
 
 #include<Windows.h>
 #include <vector>
